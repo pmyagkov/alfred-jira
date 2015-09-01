@@ -7,6 +7,7 @@ if (!argv['_'].length) {
 }
 
 var ticketNumber = argv['_'][0];
+var COMMENTS_COUNT = 20;
 
 request({
   method: 'GET',
@@ -16,7 +17,7 @@ request({
   },
   auth: {
     'user': 'p.myagkov@mail.msk',
-    'pass': 'Make@Deardeer',
+    'pass': 'Make@Deardeer'
   }
 
 }, function (error, response, body) {
@@ -29,6 +30,7 @@ request({
 
     var item = new alfredo.Item({
       title: ticket.fields.summary,
+      subtitle: ticket.fields.assignee.displayName + ' — ' + ticket.fields.status.name,
       arg: ticketNumber
     });
 
@@ -36,7 +38,7 @@ request({
 
     var comments = ticket.fields.comment.comments;
     var i = 1, comment;
-    while (i <= 20 && comments.length - i > 0) {
+    while (i <= COMMENTS_COUNT && comments.length - i > 0) {
       comment = comments[comments.length - i];
       items.push(new alfredo.Item({
         title: comment.body,

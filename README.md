@@ -6,7 +6,7 @@ This workflow is able to display JIRA ticket's summary, current status, assignee
 Typing `j TICKET_NUMBER` you'll view all this info in the alfred manner. 
  
 ## Installation
-To install this workflow please download the latest `jira.alfredworkflow` file from the repo (https://github.com/pmyagkov/alfred-jira/releases)[releases]. 
+To install this workflow please download the latest `jira.alfredworkflow` file from the repo [releases](https://github.com/pmyagkov/alfred-jira/releases). 
 Then click to the downloaded file and add the workflow to alfred.
 
 ## Configuration

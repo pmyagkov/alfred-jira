@@ -18,6 +18,8 @@
   "homepage": "https://github.com/pmyagkov/alfred-jira#readme",
   "dependencies": {
     "alfredo": "^0.2.0",
+    "flavored-path": "0.0.8",
+    "lodash": "^3.10.1",
     "minimist": "^1.2.0",
     "request": "^2.61.0"
   }

@@ -22,6 +22,11 @@ function formatError(title, subtitle) {
   };
 }
 
+function formatUrl(url, ticketNumber) {
+  return (url[url.length - 1] === '/' ? url.substr(0, url.length - 1) : url) +
+    '/rest/api/2/issue/' + ticketNumber;
+}
+
 function readCreds() {
   if (!fs.existsSync(CONFIG_FILE_PATH)) {
     return formatError('Config file ~/.alfred-jira not found!');
@@ -32,13 +37,14 @@ function readCreds() {
   if (configStrings.length !== 2) {
     return formatError(
       'Config file has invalid format!',
-      'Please create it using the following format: username\npassword'
+      'Please create it using the following format: jira_url\nusername\npassword'
     );
   }
 
   return {
-    user: configStrings[0],
-    pass: configStrings[1]
+    url: configStrings[0],
+    user: configStrings[1],
+    pass: configStrings[2]
   };
 }
 
@@ -69,28 +75,16 @@ function outputTicketInfo(ticketJSON) {
   item.feedback(items);
 }
 
-var credsObj = readCreds();
-if (credsObj.error) {
-  var item = new alfredo.Item({
-    title: credsObj.title,
-    subtitle: credsObj.subtitle
-  });
-  item.feedback();
-
-} else {
-  makeRequest(credsObj);
-}
-
-function makeRequest(credsObj) {
+function makeRequest(configObj) {
   request({
     method: 'GET',
-    uri: 'https://jira.mail.ru/rest/api/2/issue/' + ticketNumber,
+    uri: formatUrl(configObj.url, ticketNumber),
     headers: {
       'Content-type': 'application/json'
     },
     auth: {
-      'user': credsObj.user,
-      'pass': credsObj.pass
+      'user': configObj.user,
+      'pass': configObj.pass
     }
 
   }, function (error, response, body) {
@@ -123,4 +117,17 @@ function makeRequest(credsObj) {
     }
   });
 }
+
+var configObj = readCreds();
+if (configObj.error) {
+  var item = new alfredo.Item({
+    title: configObj.title,
+    subtitle: configObj.subtitle
+  });
+  item.feedback();
+
+} else {
+  makeRequest(configObj);
+}
+
 

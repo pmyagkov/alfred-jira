@@ -34,10 +34,9 @@ function readCreds() {
 
   var configFile = fs.readFileSync(CONFIG_FILE_PATH, 'utf8');
   var configStrings = _.compact(configFile.split('\n'));
-  if (configStrings.length !== 2) {
+  if (configStrings.length !== 3) {
     return formatError(
-      'Config file has invalid format!',
-      'Please create it using the following format: jira_url\nusername\npassword'
+      'Config file has invalid format!'
     );
   }
 

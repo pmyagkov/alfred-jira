@@ -16,8 +16,8 @@ request({
     'Content-type': 'application/json'
   },
   auth: {
-    'user': 'p.myagkov@mail.msk',
-    'pass': 'Make@Deardeer'
+    'user': 'get-things-done',
+    'pass': 'SZbGPOD~dK-0NDOms@ZI4AQpnBGA~=GU'
   }
 
 }, function (error, response, body) {

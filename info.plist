@@ -42,11 +42,13 @@
 				<key>queuedelaycustom</key>
 				<integer>2</integer>
 				<key>queuedelayimmediatelyinitially</key>
-				<true/>
+				<false/>
 				<key>queuedelaymode</key>
 				<integer>2</integer>
 				<key>queuemode</key>
 				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Please wait</string>
 				<key>script</key>
 				<string>/usr/local/bin/node ./getTicketInfo.js {query}</string>
 				<key>title</key>

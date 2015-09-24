@@ -5,6 +5,7 @@ var fs = require('fs');
 var path = require('flavored-path');
 var _ = require('lodash');
 
+var COMMENTS_TAIL_COUNT = 5;
 var CONFIG_FILE = path.get('~/.config/alfred-jira/alfred-jira');
 
 if (!argv['_'].length) {
@@ -25,7 +26,7 @@ function formatError(title, subtitle) {
 }
 
 function formatUrl(url, ticketNumber) {
-  var fields = ['summary', 'assignee', 'status', 'issuelinks'];
+  var fields = ['summary', 'assignee', 'status', 'subtasks', 'issuelinks', 'comment'];
   return (url[url.length - 1] === '/' ? url.substr(0, url.length - 1) : url) +
     '/rest/api/2/issue/' + ticketNumber + '?' + fields.join(',');
 }
@@ -67,22 +68,51 @@ function outputTicketInfo(ticketJSON) {
 
   var items = [item];
 
+  var subtasks = ticket.fields.subtasks;
+  for (var i = 0, subtask; i < subtasks.length; i++) {
+    subtask = subtasks[i];
+    items.push(new alfredo.Item({
+      title: subtask.key + ' ' + subtask.fields.summary,
+      subtitle: '[' + subtask.fields.status.name + '] сабтаск для ' + ticketNumber,
+      arg: subtask.key
+    }));
+  }
+
   var links = ticket.fields.issuelinks;
-  for (var i = 0,link; i < links.length; i++) {
+  for (var i = 0, link; i < links.length; i++) {
     link = links[i];
     if (link.outwardIssue !== undefined) {
       items.push(new alfredo.Item({
         title: link.outwardIssue.key + ' ' + link.outwardIssue.fields.summary,
-        subtitle: '[' + link.outwardIssue.fields.status.name + '] ' + link.type.outward,
+        subtitle: '[' + link.outwardIssue.fields.status.name + '] ' + link.type.inward + ' ' + ticketNumber,
         arg: link.outwardIssue.key
       }));
     } else if (link.inwardIssue !== undefined) {
       items.push(new alfredo.Item({
         title: link.inwardIssue.key + ' ' + link.inwardIssue.fields.summary,
-        subtitle: '[' + link.inwardIssue.fields.status.name + '] ' + link.type.inward,
+        subtitle: '[' + link.inwardIssue.fields.status.name + '] ' + link.type.outward + ' ' + ticketNumber,
         arg: link.inwardIssue.key
       }));
     }
+  }
+
+  var comments = ticket.fields.comment.comments;
+  var commentsCount = Math.min(comments.length, COMMENTS_TAIL_COUNT);
+  var i = comments.length - commentsCount;
+  var comment, commentBody, commentBodyLength;
+  for (;i < commentsCount; i++) {
+    comment = comments[i];
+    commentBody = comment.body.replace(/\r?\n/g, ' ');
+    commentBodyLength = commentBody.length;
+    if (commentBodyLength > 100) {
+      commentBody = commentBody.substr(0, 50) + ' … ' + commentBody.substr(commentBody.length - 50);
+    }
+    items.push(new alfredo.Item({
+      title: commentBody,
+      subtitle: comment.author.displayName + ' (' + comment.author.emailAddress + ')',
+      icon: 'comment.png',
+      arg: ticketNumber
+    }));
   }
 
   item.feedback(items);

@@ -11,8 +11,7 @@ if (!argv['_'].length) {
 
 var ticketNumber = argv['_'][0];
 var COMMENTS_COUNT = 20;
-var CONFIG_FILE_NAME = '.alfred-jira';
-var CONFIG_FILE_PATH = path.get('~/' + CONFIG_FILE_NAME);
+var CONFIG_FILE = path.get('~/.config/alfred-jira/alfred-jira');
 
 function formatError(title, subtitle) {
   return {
@@ -28,12 +27,12 @@ function formatUrl(url, ticketNumber) {
 }
 
 function readCreds() {
-  if (!fs.existsSync(CONFIG_FILE_PATH)) {
-    return formatError('Config file ~/.alfred-jira not found!');
+  if (!fs.existsSync(CONFIG_FILE)) {
+    return formatError('Config file ' + CONFIG_FILE + ' is not found!');
   }
 
-  var configFile = fs.readFileSync(CONFIG_FILE_PATH, 'utf8');
-  var configStrings = _.compact(configFile.split('\r\n'));
+  var configFile = fs.readFileSync(CONFIG_FILE, 'utf8');
+  var configStrings = _.compact(configFile.split(/\r?\n/));
   if (configStrings.length !== 3) {
     return formatError(
       'Config file has invalid format!'
@@ -128,5 +127,3 @@ if (configObj.error) {
 } else {
   makeRequest(configObj);
 }
-
-

@@ -32,7 +32,7 @@ function readCreds() {
   }
 
   var configFile = fs.readFileSync(CONFIG_FILE, 'utf8');
-  var configStrings = _.compact(configFile.split('\r\n'));
+  var configStrings = _.compact(configFile.split(/\r?\n/));
   if (configStrings.length !== 3) {
     return formatError(
       'Config file has invalid format!'
@@ -127,5 +127,3 @@ if (configObj.error) {
 } else {
   makeRequest(configObj);
 }
-
-

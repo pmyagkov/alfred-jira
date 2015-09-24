@@ -15,7 +15,8 @@ if (!argv['_'].length) {
 }
 
 var ticketNumber = argv['_'][0];
-var fullTicketNumber = true;
+var isFullTicketNumber = true;
+var isSearch = false;
 
 function formatError(title, subtitle) {
   return {
@@ -25,10 +26,20 @@ function formatError(title, subtitle) {
   };
 }
 
-function formatUrl(url, ticketNumber) {
-  var fields = ['summary', 'assignee', 'status', 'subtasks', 'issuelinks', 'comment'];
-  return (url[url.length - 1] === '/' ? url.substr(0, url.length - 1) : url) +
-    '/rest/api/2/issue/' + ticketNumber + '?' + fields.join(',');
+function formatUrl(url, ticketNumber, defaultProject) {
+  if (url[url.length - 1] === '/') {
+    url =  url.substr(0, url.length - 1);
+  }
+
+  if (isSearch) {
+    var jql = escape('project=' + defaultProject + ' and text ~ "' + ticketNumber + '"');
+    var fields = ['summary', 'assignee', 'status'];
+    return url + '/rest/api/2/search?jql=' + jql + '&fields=' + fields.join(',');
+
+  } else {
+    var fields = ['summary', 'assignee', 'status', 'subtasks', 'issuelinks', 'comment'];
+    return url + '/rest/api/2/issue/' + ticketNumber + '?fields=' + fields.join(',');
+  }
 }
 
 function readCreds() {
@@ -56,7 +67,7 @@ function outputTicketInfo(ticketJSON) {
   var ticket = ticketJSON;
 
   var title = ticket.fields.summary;
-  if (!fullTicketNumber) {
+  if (!isFullTicketNumber) {
     title = ticketNumber + ' ' + title;
   }
 
@@ -118,10 +129,29 @@ function outputTicketInfo(ticketJSON) {
   item.feedback(items);
 }
 
+function outputSearchResults(ticketJSON) {
+  var ticket = ticketJSON;
+
+  var title = ticket.fields.summary;
+  if (!isFullTicketNumber) {
+    title = ticketNumber + ' ' + title;
+  }
+
+  var item = new alfredo.Item({
+    title: title,
+    subtitle: '[' + ticket.fields.status.name + '] ' + ticket.fields.assignee.displayName,
+    arg: ticketNumber
+  });
+
+  var items = [item];
+
+  item.feedback(items);
+}
+
 function makeRequest(configObj) {
   request({
     method: 'GET',
-    uri: formatUrl(configObj.url, ticketNumber),
+    uri: formatUrl(configObj.url, ticketNumber, configObj.defaultProject),
     headers: {
       'Content-type': 'application/json'
     },
@@ -150,11 +180,15 @@ function makeRequest(configObj) {
         }).feedback();
 
       case 200:
-        return outputTicketInfo(body);
+        if (isSearch) {
+          return outputSearchResults(body);
+        } else {
+          return outputTicketInfo(body);
+        }
 
       default:
         return new alfredo.Item({
-          title: 'Not expected response status: ' + response.statusCode,
+          title: 'Unexpected Jira response status: ' + response.statusCode,
           subtitle: body.errorMessages.join('; ')
         }).feedback();
     }
@@ -164,15 +198,18 @@ function makeRequest(configObj) {
 var configObj = readCreds();
 
 if (/^\d+$/.test(ticketNumber) && configObj.defaultProject !== undefined) {
-  fullTicketNumber = false;
+  isFullTicketNumber = false;
   ticketNumber = configObj.defaultProject.toUpperCase() + '-' + ticketNumber;
 
 } else if (/^[a-z]+-\d+$/i.test(ticketNumber)) {
   ticketNumber = ticketNumber.toUpperCase()
 
+} else if (configObj.defaultProject !== undefined) {
+  isSearch = true;
+
 } else {
   return new alfredo.Item({
-    title: 'Bad ticket number'
+    title: 'Please, define default project in config to turn on text search'
   }).feedback();
 }
 

@@ -24,8 +24,9 @@ function formatError(title, subtitle) {
 }
 
 function formatUrl(url, ticketNumber) {
+  var fields = ['summary', 'assignee', 'status', 'comment'];
   return (url[url.length - 1] === '/' ? url.substr(0, url.length - 1) : url) +
-    '/rest/api/2/issue/' + ticketNumber;
+    '/rest/api/2/issue/' + ticketNumber + '?' + fields.join(',');
 }
 
 function readCreds() {

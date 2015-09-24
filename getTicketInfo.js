@@ -6,7 +6,9 @@ var path = require('flavored-path');
 var _ = require('lodash');
 
 if (!argv['_'].length) {
-  return 'No ticket number passed!';
+  return new alfredo.Item({
+    title: 'No ticket number passed'
+  }).feedback();
 }
 
 var ticketNumber = argv['_'][0];
@@ -28,14 +30,14 @@ function formatUrl(url, ticketNumber) {
 
 function readCreds() {
   if (!fs.existsSync(CONFIG_FILE)) {
-    return formatError('Config file ' + CONFIG_FILE + ' is not found!');
+    return formatError('Config file ' + CONFIG_FILE + ' is not found');
   }
 
   var configFile = fs.readFileSync(CONFIG_FILE, 'utf8');
   var configStrings = _.compact(configFile.split(/\r?\n/));
   if (configStrings.length !== 3) {
     return formatError(
-      'Config file has invalid format!'
+      'Config file has invalid format'
     );
   }
 
@@ -89,7 +91,7 @@ function makeRequest(configObj) {
     if (error) {
       if (error.message.indexOf('auth()') > -1) {
         return new alfredo.Item({
-          title: 'Provided username of password is invalid!'
+          title: 'Provided username of password is invalid'
         }).feedback();
       }
     }
@@ -101,7 +103,7 @@ function makeRequest(configObj) {
     switch (response.statusCode) {
       case 404:
         return new alfredo.Item({
-          title: 'Ticket not found!'
+          title: 'Ticket not found'
         }).feedback();
 
       case 200:

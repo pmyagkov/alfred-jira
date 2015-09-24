@@ -5,7 +5,6 @@ var fs = require('fs');
 var path = require('flavored-path');
 var _ = require('lodash');
 
-var COMMENTS_COUNT = 20;
 var CONFIG_FILE = path.get('~/.config/alfred-jira/alfred-jira');
 
 if (!argv['_'].length) {
@@ -26,7 +25,7 @@ function formatError(title, subtitle) {
 }
 
 function formatUrl(url, ticketNumber) {
-  var fields = ['summary', 'assignee', 'status', 'comment'];
+  var fields = ['summary', 'assignee', 'status', 'issuelinks'];
   return (url[url.length - 1] === '/' ? url.substr(0, url.length - 1) : url) +
     '/rest/api/2/issue/' + ticketNumber + '?' + fields.join(',');
 }
@@ -62,29 +61,28 @@ function outputTicketInfo(ticketJSON) {
 
   var item = new alfredo.Item({
     title: title,
-    subtitle: ticket.fields.assignee.displayName + ' — ' + ticket.fields.status.name,
+    subtitle: '[' + ticket.fields.status.name + '] ' + ticket.fields.assignee.displayName,
     arg: ticketNumber
   });
 
   var items = [item];
 
-  var comments = ticket.fields.comment.comments;
-  var commentsCount = Math.min(comments.length, COMMENTS_COUNT);
-  var i = comments.length - commentsCount;
-  var comment, commentBody, commentBodyLength;
-  for (;i < commentsCount; i++) {
-    comment = comments[i];
-    commentBody = comment.body.replace(/\r?\n/g, ' ');
-    commentBodyLength = commentBody.length;
-    if (commentBodyLength > 100) {
-      commentBody = commentBody.substr(0, 50) + ' … ' + commentBody.substr(commentBody.length - 50);
+  var links = ticket.fields.issuelinks;
+  for (var i = 0,link; i < links.length; i++) {
+    link = links[i];
+    if (link.outwardIssue !== undefined) {
+      items.push(new alfredo.Item({
+        title: link.outwardIssue.key + ' ' + link.outwardIssue.fields.summary,
+        subtitle: '[' + link.outwardIssue.fields.status.name + '] ' + link.type.outward,
+        arg: link.outwardIssue.key
+      }));
+    } else if (link.inwardIssue !== undefined) {
+      items.push(new alfredo.Item({
+        title: link.inwardIssue.key + ' ' + link.inwardIssue.fields.summary,
+        subtitle: '[' + link.inwardIssue.fields.status.name + '] ' + link.type.inward,
+        arg: link.inwardIssue.key
+      }));
     }
-    items.push(new alfredo.Item({
-      title: commentBody,
-      subtitle: comment.author.displayName + ' (' + comment.author.emailAddress + ')',
-      icon: 'comment.png',
-      arg: ticketNumber
-    }));
   }
 
   item.feedback(items);

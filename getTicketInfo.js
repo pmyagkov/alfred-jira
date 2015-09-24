@@ -5,6 +5,9 @@ var fs = require('fs');
 var path = require('flavored-path');
 var _ = require('lodash');
 
+var COMMENTS_COUNT = 20;
+var CONFIG_FILE = path.get('~/.config/alfred-jira/alfred-jira');
+
 if (!argv['_'].length) {
   return new alfredo.Item({
     title: 'No ticket number passed'
@@ -12,8 +15,7 @@ if (!argv['_'].length) {
 }
 
 var ticketNumber = argv['_'][0];
-var COMMENTS_COUNT = 20;
-var CONFIG_FILE = path.get('~/.config/alfred-jira/alfred-jira');
+var fullTicketNumber = true;
 
 function formatError(title, subtitle) {
   return {
@@ -36,7 +38,7 @@ function readCreds() {
 
   var configFile = fs.readFileSync(CONFIG_FILE, 'utf8');
   var configStrings = _.compact(configFile.split(/\r?\n/));
-  if (configStrings.length !== 3) {
+  if (configStrings.length < 3 || configStrings.length > 4) {
     return formatError(
       'Config file has invalid format'
     );
@@ -45,15 +47,21 @@ function readCreds() {
   return {
     url: configStrings[0],
     user: configStrings[1],
-    pass: configStrings[2]
+    pass: configStrings[2],
+    defaultProject: configStrings[3]
   };
 }
 
 function outputTicketInfo(ticketJSON) {
   var ticket = ticketJSON;
 
+  var title = ticket.fields.summary;
+  if (!fullTicketNumber) {
+    title = ticketNumber + ' ' + title;
+  }
+
   var item = new alfredo.Item({
-    title: ticket.fields.summary,
+    title: title,
     subtitle: ticket.fields.assignee.displayName + ' — ' + ticket.fields.status.name,
     arg: ticketNumber
   });
@@ -120,6 +128,20 @@ function makeRequest(configObj) {
 }
 
 var configObj = readCreds();
+
+if (/^\d+$/.test(ticketNumber) && configObj.defaultProject !== undefined) {
+  fullTicketNumber = false;
+  ticketNumber = configObj.defaultProject.toUpperCase() + '-' + ticketNumber;
+
+} else if (/^[a-z]+-\d+$/i.test(ticketNumber)) {
+  ticketNumber = ticketNumber.toUpperCase()
+
+} else {
+  return new alfredo.Item({
+    title: 'Bad ticket number'
+  }).feedback();
+}
+
 if (configObj.error) {
   var item = new alfredo.Item({
     title: configObj.title,

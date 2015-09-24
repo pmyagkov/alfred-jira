@@ -69,16 +69,22 @@ function outputTicketInfo(ticketJSON) {
   var items = [item];
 
   var comments = ticket.fields.comment.comments;
-  var i = 1, comment;
-  while (i <= COMMENTS_COUNT && comments.length - i > 0) {
-    comment = comments[comments.length - i];
+  var commentsCount = Math.min(comments.length, COMMENTS_COUNT);
+  var i = comments.length - commentsCount;
+  var comment, commentBody, commentBodyLength;
+  for (;i < commentsCount; i++) {
+    comment = comments[i];
+    commentBody = comment.body.replace(/\r?\n/g, ' ');
+    commentBodyLength = commentBody.length;
+    if (commentBodyLength > 100) {
+      commentBody = commentBody.substr(0, 50) + ' … ' + commentBody.substr(commentBody.length - 50);
+    }
     items.push(new alfredo.Item({
-      title: comment.body,
+      title: commentBody,
       subtitle: comment.author.displayName + ' (' + comment.author.emailAddress + ')',
       icon: 'comment.png',
       arg: ticketNumber
     }));
-    i++;
   }
 
   item.feedback(items);

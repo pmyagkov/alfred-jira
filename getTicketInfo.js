@@ -5,13 +5,17 @@ var fs = require('fs');
 var path = require('flavored-path');
 var _ = require('lodash');
 
+var COMMENTS_COUNT = 20;
+var CONFIG_FILE = path.get('~/.config/alfred-jira/alfred-jira');
+
 if (!argv['_'].length) {
-  return 'No ticket number passed!';
+  return new alfredo.Item({
+    title: 'No ticket number passed'
+  }).feedback();
 }
 
 var ticketNumber = argv['_'][0];
-var COMMENTS_COUNT = 20;
-var CONFIG_FILE = path.get('~/.config/alfred-jira/alfred-jira');
+var fullTicketNumber = true;
 
 function formatError(title, subtitle) {
   return {
@@ -22,35 +26,42 @@ function formatError(title, subtitle) {
 }
 
 function formatUrl(url, ticketNumber) {
+  var fields = ['summary', 'assignee', 'status', 'comment'];
   return (url[url.length - 1] === '/' ? url.substr(0, url.length - 1) : url) +
-    '/rest/api/2/issue/' + ticketNumber;
+    '/rest/api/2/issue/' + ticketNumber + '?' + fields.join(',');
 }
 
 function readCreds() {
   if (!fs.existsSync(CONFIG_FILE)) {
-    return formatError('Config file ' + CONFIG_FILE + ' is not found!');
+    return formatError('Config file ' + CONFIG_FILE + ' is not found');
   }
 
   var configFile = fs.readFileSync(CONFIG_FILE, 'utf8');
   var configStrings = _.compact(configFile.split(/\r?\n/));
-  if (configStrings.length !== 3) {
+  if (configStrings.length < 3 || configStrings.length > 4) {
     return formatError(
-      'Config file has invalid format!'
+      'Config file has invalid format'
     );
   }
 
   return {
     url: configStrings[0],
     user: configStrings[1],
-    pass: configStrings[2]
+    pass: configStrings[2],
+    defaultProject: configStrings[3]
   };
 }
 
 function outputTicketInfo(ticketJSON) {
   var ticket = ticketJSON;
 
+  var title = ticket.fields.summary;
+  if (!fullTicketNumber) {
+    title = ticketNumber + ' ' + title;
+  }
+
   var item = new alfredo.Item({
-    title: ticket.fields.summary,
+    title: title,
     subtitle: ticket.fields.assignee.displayName + ' — ' + ticket.fields.status.name,
     arg: ticketNumber
   });
@@ -58,16 +69,22 @@ function outputTicketInfo(ticketJSON) {
   var items = [item];
 
   var comments = ticket.fields.comment.comments;
-  var i = 1, comment;
-  while (i <= COMMENTS_COUNT && comments.length - i > 0) {
-    comment = comments[comments.length - i];
+  var commentsCount = Math.min(comments.length, COMMENTS_COUNT);
+  var i = comments.length - commentsCount;
+  var comment, commentBody, commentBodyLength;
+  for (;i < commentsCount; i++) {
+    comment = comments[i];
+    commentBody = comment.body.replace(/\r?\n/g, ' ');
+    commentBodyLength = commentBody.length;
+    if (commentBodyLength > 100) {
+      commentBody = commentBody.substr(0, 50) + ' … ' + commentBody.substr(commentBody.length - 50);
+    }
     items.push(new alfredo.Item({
-      title: comment.body,
+      title: commentBody,
       subtitle: comment.author.displayName + ' (' + comment.author.emailAddress + ')',
       icon: 'comment.png',
       arg: ticketNumber
     }));
-    i++;
   }
 
   item.feedback(items);
@@ -89,7 +106,7 @@ function makeRequest(configObj) {
     if (error) {
       if (error.message.indexOf('auth()') > -1) {
         return new alfredo.Item({
-          title: 'Provided username of password is invalid!'
+          title: 'Provided username of password is invalid'
         }).feedback();
       }
     }
@@ -101,7 +118,7 @@ function makeRequest(configObj) {
     switch (response.statusCode) {
       case 404:
         return new alfredo.Item({
-          title: 'Ticket not found!'
+          title: 'Ticket not found'
         }).feedback();
 
       case 200:
@@ -117,6 +134,20 @@ function makeRequest(configObj) {
 }
 
 var configObj = readCreds();
+
+if (/^\d+$/.test(ticketNumber) && configObj.defaultProject !== undefined) {
+  fullTicketNumber = false;
+  ticketNumber = configObj.defaultProject.toUpperCase() + '-' + ticketNumber;
+
+} else if (/^[a-z]+-\d+$/i.test(ticketNumber)) {
+  ticketNumber = ticketNumber.toUpperCase()
+
+} else {
+  return new alfredo.Item({
+    title: 'Bad ticket number'
+  }).feedback();
+}
+
 if (configObj.error) {
   var item = new alfredo.Item({
     title: configObj.title,

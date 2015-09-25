@@ -1,12 +1,12 @@
 var argv = require('minimist')(process.argv.slice(2));
 var request = require('request');
 var alfredo = require('alfredo');
-var fs = require('fs');
-var path = require('flavored-path');
 var _ = require('lodash');
 
+var AlfredError = require('./AlfredError');
+var formatter = require('./formatter');
+
 var COMMENTS_TAIL = 5;
-var CONFIG_FILE = path.get('~/.config/alfred-jira/alfred-jira');
 
 if (!argv['_'].length) {
   return new alfredo.Item({
@@ -14,103 +14,32 @@ if (!argv['_'].length) {
   }).feedback();
 }
 
-var inputQuery = argv['_'][0];
-var isSearch = false;
-
-function formatError(title, subtitle) {
-  return {
-    error: true,
-    title: title,
-    subtitle: subtitle ? subtitle : ''
-  };
-}
-
-function formatUrl(url, query, defaultProject) {
-  if (isSearch) {
-    var jql = encodeURIComponent('project=' + defaultProject + ' and text ~ "' + query + '"');
-    var fields = ['summary', 'assignee', 'status'];
-    return url + '/rest/api/2/search?jql=' + jql + '&fields=' + fields.join(',');
-
-  } else {
-    var fields = ['summary', 'assignee', 'status', 'subtasks', 'issuelinks', 'comment'];
-    return url + '/rest/api/2/issue/' + query + '?fields=' + fields.join(',');
-  }
-}
-
-function formatIssue(issue) {
-  var assignee = issue.fields.assignee ? issue.fields.assignee.displayName : 'Unassigned';
-  return {
-    title: issue.key + ' ' + issue.fields.summary,
-    subtitle: '[' + issue.fields.status.name + '] ' + assignee,
-    arg: issue.key
-  }
-}
-
-function formatSubtask(subtask, issueKey) {
-  return {
-    title: subtask.key + ' ' + subtask.fields.summary,
-    subtitle: '[' + subtask.fields.status.name + '] сабтаск для ' + issueKey,
-    arg: subtask.key
-  }
-}
-
-function formatLink(link, issueKey) {
-  if (link.outwardIssue !== undefined) {
-    return {
-      title: link.outwardIssue.key + ' ' + link.outwardIssue.fields.summary,
-      subtitle: '[' + link.outwardIssue.fields.status.name + '] ' + link.type.inward + ' ' + issueKey,
-      arg: link.outwardIssue.key
-    }
-  } else if (link.inwardIssue !== undefined) {
-    return {
-      title: link.inwardIssue.key + ' ' + link.inwardIssue.fields.summary,
-      subtitle: '[' + link.inwardIssue.fields.status.name + '] ' + link.type.outward + ' ' + issueKey,
-      arg: link.inwardIssue.key
-    }
-  }
-}
-
-function formatComment(comment, issueKey) {
-  var commentBody = comment.body.replace(/\r?\n/g, ' ');
-  if (commentBody.length > 120) {
-    commentBody = commentBody.substr(0, 50) + ' … ' + commentBody.substr(commentBody.length - 50);
-  }
-  return {
-    title: commentBody,
-    subtitle: comment.author.displayName + ' <' + comment.author.emailAddress + '>',
-    icon: 'comment.png',
-    arg: issueKey
-  }
-}
-
 function outputIssueInfo(data) {
-  var items = [new alfredo.Item(formatIssue(data))];
+  var items = [new alfredo.Item(formatter.issue(data))];
 
   var subtasks = data.fields.subtasks;
   for (var i = 0; i < subtasks.length; i++) {
-    items.push(new alfredo.Item(formatSubtask(subtasks[i], data.key)));
+    items.push(new alfredo.Item(formatter.subtask(subtasks[i], data.key)));
   }
 
   var links = data.fields.issuelinks;
   for (var i = 0; i < links.length; i++) {
-    items.push(new alfredo.Item(formatLink(links[i], data.key)));
+    items.push(new alfredo.Item(formatter.link(links[i], data.key)));
   }
 
   var comments = data.fields.comment.comments;
   var commentsCount = Math.min(comments.length, COMMENTS_TAIL);
   for (var i = comments.length - commentsCount;i < commentsCount; i++) {
-    items.push(new alfredo.Item(formatComment(comments[i], data.key)));
+    items.push(new alfredo.Item(formatter.comment(comments[i], data.key)));
   }
 
   items[0].feedback(items);
 }
 
 function outputSearchResults(data) {
-  var items = []
-
-  for (var i = 0, issue; i < data.issues.length; i++) {
-    items.push(new alfredo.Item(formatIssue(data.issues[i])));
-  }
+  var items = data.issues.map(function (issue) {
+    return new alfredo.Item(formatter.issue(issue));
+  });
 
   if (items.length) {
     items[0].feedback(items);
@@ -121,10 +50,10 @@ function outputSearchResults(data) {
   }
 }
 
-function makeRequest(configObj) {
+function makeRequest(queryConfigObj) {
   request({
     method: 'GET',
-    uri: formatUrl(configObj.url, inputQuery, configObj.defaultProject),
+    uri: formatter.url(queryConfigObj),
     headers: {
       'Content-type': 'application/json'
     },
@@ -136,10 +65,12 @@ function makeRequest(configObj) {
   }, function (error, response, body) {
     if (error) {
       if (error.message.indexOf('auth()') > -1) {
-        return new alfredo.Item({
-          title: 'Provided username of password is invalid'
-        }).feedback();
+        return formatter.error('Provided username of password is invalid')
+          .toItem().feedback();
       }
+
+      return formatter.error('Unexpected error', error.message)
+        .toItem().feedback();
     }
 
     if (typeof body === 'string') {
@@ -148,75 +79,58 @@ function makeRequest(configObj) {
 
     switch (response.statusCode) {
       case 404:
-        return new alfredo.Item({
-          title: 'No issues found'
-        }).feedback();
+        return formatter.error('No issues found').toItem().feedback();
 
       case 200:
-        if (isSearch) {
+        if (queryConfigObj.isSearch) {
           return outputSearchResults(body);
         } else {
           return outputIssueInfo(body);
         }
 
       default:
-        return new alfredo.Item({
-          title: 'Unexpected Jira response status: ' + response.statusCode,
-          subtitle: body.errorMessages.join('; ')
-        }).feedback();
+        return formatter.error(
+          'Unexpected Jira response status: ' + response.statusCode,
+          body.errorMessages
+        ).toItem().feedback();
     }
   });
 }
 
-function readConfig() {
-  if (!fs.existsSync(CONFIG_FILE)) {
-    return formatError('Config file ' + CONFIG_FILE + ' is not found');
-  }
+function calculateQuery(inputQuery, configObj) {
+  var query = inputQuery;
+  var isSearch = false;
 
-  var configFile = fs.readFileSync(CONFIG_FILE, 'utf8');
-  var configStrings = _.compact(configFile.split(/\r?\n/));
-  if (configStrings.length < 3 || configStrings.length > 4) {
-    return formatError(
-      'Config file has invalid format'
-    );
-  }
-
-  var url = configStrings[0];
-  if (url[url.length - 1] === '/') {
-    url =  url.substr(0, url.length - 1);
-  }
-
-  return {
-    url: url,
-    user: configStrings[1],
-    pass: configStrings[2],
-    defaultProject: configStrings[3]
-  };
-}
-
-var configObj = readConfig();
-
-if (configObj.error) {
-  return new alfredo.Item({
-    title: configObj.title,
-    subtitle: configObj.subtitle
-  }).feedback();
-
-} else {
   if (/^\d+$/.test(inputQuery) && configObj.defaultProject !== undefined) {
-    inputQuery = configObj.defaultProject.toUpperCase() + '-' + inputQuery;
+    query = configObj.defaultProject.toUpperCase() + '-' + inputQuery;
 
   } else if (/^[a-z]+-\d+$/i.test(inputQuery)) {
-    inputQuery = inputQuery.toUpperCase()
+    query = inputQuery.toUpperCase()
 
   } else if (configObj.defaultProject !== undefined) {
     isSearch = true;
 
   } else {
-    return new alfredo.Item({
-      title: 'Please, define default project in config to turn on text search'
-    }).feedback();
+    return formatter.error('Please, define default project in config to turn on text search');
   }
 
-  makeRequest(configObj);
+  return {
+    query: query,
+    isSearch: isSearch
+  };
+}
+
+var configObj = require('./config').read();
+var queryObj;
+
+if (configObj instanceof AlfredError) {
+  return configObj.toItem().feedback();
+} else {
+
+  queryObj = calculateQuery(argv['_'][0], configObj);
+  if (queryObj instanceof AlfredError) {
+    return queryObj.toItem().feedback();
+  }
+
+  makeRequest(_.extend(configObj, queryObj));
 }

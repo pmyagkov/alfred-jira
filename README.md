@@ -10,12 +10,13 @@ To install this workflow please download the latest `jira.alfredworkflow` file f
 Then click to the downloaded file and add the workflow to alfred.
 
 ## Configuration
-To connect to JIRA the script needs base url of the jira instance, username and password. It tries to read this info from the `~/.config/alfred-jira/alfred-jira` config file.
+To connect to JIRA the script needs base url of the jira instance, username, password and default project key (like 'JIRA'). It tries to read this info from the `~/.config/alfred-jira/alfred-jira` config file.
 This file should be formatted in the following manner:
 ```
 https://jira.instance.com
 username
 password
+defaultProject
 ```
 
 To start using this workflow please create the config file and provide actual info for your jira instance and user.

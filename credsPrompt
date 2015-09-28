@@ -1,0 +1,23 @@
+#!/usr/bin/env osascript -l JavaScript
+
+var app = Application('com.runningwithcrayons.Alfred-2');
+app.includeStandardAdditions = true;
+
+function prompt(text, defaultAnswer) {
+  var options = { defaultAnswer: defaultAnswer || '' }
+  try {
+    return app.displayDialog(text, options).textReturned;
+  } catch (e) {
+    return e;
+  }
+}
+var username, password;
+do {
+  username = prompt('What is your JIRA username?', '');
+} while(!username);
+
+do {
+  password = prompt('What is your JIRA password?\nIt is stored securely in the keychain.', '');
+} while(!password);
+
+console.log(username + '\n' + password);

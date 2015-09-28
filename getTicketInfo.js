@@ -2,12 +2,14 @@ var argv = require('minimist')(process.argv.slice(2));
 var request = require('request');
 var alfredo = require('alfredo');
 var _ = require('lodash');
+var keychain = require('keychain');
 
 var AlfredError = require('./AlfredError');
+var config = require('./config');
 var formatter = require('./formatter');
 
+var SERVICE_NAME = 'alfred-jira';
 var COMMENTS_TAIL = 5;
-
 if (!argv['_'].length) {
   return new alfredo.Item({
     title: 'No query passed'
@@ -15,8 +17,8 @@ if (!argv['_'].length) {
 }
 
 function outputIssueInfo(data) {
-  var items = [new alfredo.Item(formatter.issue(data))];
 
+  var items = [new alfredo.Item(formatter.issue(data))];
   var subtasks = data.fields.subtasks;
   for (var i = 0; i < subtasks.length; i++) {
     items.push(new alfredo.Item(formatter.subtask(subtasks[i], data.key)));
@@ -37,10 +39,10 @@ function outputIssueInfo(data) {
 }
 
 function outputSearchResults(data) {
+
   var items = data.issues.map(function (issue) {
     return new alfredo.Item(formatter.issue(issue));
   });
-
   if (items.length) {
     items[0].feedback(items);
   } else {
@@ -99,17 +101,17 @@ function makeRequest(queryConfigObj) {
 
 function calculateQuery(inputQuery, configObj) {
   var query = inputQuery;
+
   var isSearch = false;
-
   if (/^\d+$/.test(inputQuery) && configObj.defaultProject !== undefined) {
+
     query = configObj.defaultProject.toUpperCase() + '-' + inputQuery;
-
   } else if (/^[a-z]+-\d+$/i.test(inputQuery)) {
+
     query = inputQuery.toUpperCase()
-
   } else if (configObj.defaultProject !== undefined) {
-    isSearch = true;
 
+    isSearch = true;
   } else {
     return formatter.error('Please, define default project in config to turn on text search');
   }
@@ -120,7 +122,66 @@ function calculateQuery(inputQuery, configObj) {
   };
 }
 
-var configObj = require('./config').read();
+var configObj = config.read();
+var queryObj;
+
+if (configObj instanceof AlfredError) {
+  return configObj.toItem().feedback();
+} else {
+  var promise;
+
+  if (!configObj.user) {
+    promise = config.requestCreds().then(function (credsObj) {
+      var def = vow.defer();
+
+      if (credsObj.user && credsObj.pass) {
+        keychain.setPassword({ account: credsObj.user, service: SERVICE_NAME, password: credsObj.pass }, function(err) {
+          def.resolve(credsObj);
+        });
+      } else {
+        def.reject(formatter.error('No valid credentials provided'));
+      }
+
+      return def.promise();
+    }).catch(function (errorObj) {
+      if (errorObj instanceof AlfredError) {
+        return errorObj.toItem().feedback();
+      }
+    }).then(function(credsObj) {
+      config.write(_.pick(credsObj, 'user'));
+
+      return vow.resolve(credsObj);
+    });
+  } else {
+    promise = keychain.getPassword({account: configObj.user, service: SERVICE_NAME}, function (err, pass) {
+      var def = vow.defer();
+      if (err) {
+        def.reject(formatter.error('Can not extract user password from the keychain'));
+      } else {
+        def.resolve(_.extend(configObj, {pass: pass}));
+      }
+
+      return def.promise();
+    });
+
+    promise.then(function (configObj) {
+      queryObj = calculateQuery(argv['_'][0], configObj);
+      if (queryObj instanceof AlfredError) {
+        return queryObj.toItem().feedback();
+      }
+
+      makeRequest(_.extend(configObj, queryObj));
+    });
+  }
+}
+
+
+
+
+
+
+/*
+var configObj = config.read();
 var queryObj;
 
 if (configObj instanceof AlfredError) {
@@ -134,3 +195,4 @@ if (configObj instanceof AlfredError) {
 
   makeRequest(_.extend(configObj, queryObj));
 }
+*/

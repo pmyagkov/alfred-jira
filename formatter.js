@@ -21,6 +21,7 @@ module.exports = {
         title: link.outwardIssue.key + ' ' + link.outwardIssue.fields.summary,
         subtitle: '[' + link.outwardIssue.fields.status.name + '] ' + link.type.inward + ' ' + issueKey,
         icon: 'images/task.png',
+        autocomplete: link.outwardIssue.key,
         arg: link.outwardIssue.key
       }
     } else if (link.inwardIssue !== undefined) {
@@ -28,6 +29,7 @@ module.exports = {
         title: link.inwardIssue.key + ' ' + link.inwardIssue.fields.summary,
         subtitle: '[' + link.inwardIssue.fields.status.name + '] ' + link.type.outward + ' ' + issueKey,
         icon: 'images/task.png',
+        autocomplete: link.inwardIssue.key,
         arg: link.inwardIssue.key
       }
     }
@@ -39,6 +41,7 @@ module.exports = {
       title: issue.key + ' ' + issue.fields.summary,
       subtitle: '[' + issue.fields.status.name + '] ' + assignee,
       icon: 'images/task.png',
+      autocomplete: issue.key,
       arg: issue.key
     }
   },
@@ -48,6 +51,7 @@ module.exports = {
       title: subtask.key + ' ' + subtask.fields.summary,
       subtitle: '[' + subtask.fields.status.name + '] сабтаск для ' + issueKey,
       icon: 'images/task.png',
+      autocomplete: subtask.key,
       arg: subtask.key
     }
   },

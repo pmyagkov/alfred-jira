@@ -11,48 +11,55 @@ module.exports = {
       title: commentBody,
       subtitle: comment.author.displayName + ' <' + comment.author.emailAddress + '>',
       icon: 'images/comment.png',
+      valid: false,
       arg: issueKey
     }
   },
 
   link: function formatLink(link, issueKey) {
+    var issue;
+    var linkType;
+
     if (link.outwardIssue !== undefined) {
-      return {
-        title: link.outwardIssue.key + ' ' + link.outwardIssue.fields.summary,
-        subtitle: '[' + link.outwardIssue.fields.status.name + '] ' + link.type.inward + ' ' + issueKey,
-        icon: 'images/task.png',
-        autocomplete: link.outwardIssue.key,
-        arg: link.outwardIssue.key
-      }
+      issue = link.outwardIssue;
+      linkType = link.type.inward;
     } else if (link.inwardIssue !== undefined) {
+      issue = link.inwardIssue;
+      linkType = link.type.outward;
+    }
+
+    if (issue) {
+      var commitMessage = issue.key + ' ' + issue.summary;
       return {
-        title: link.inwardIssue.key + ' ' + link.inwardIssue.fields.summary,
-        subtitle: '[' + link.inwardIssue.fields.status.name + '] ' + link.type.outward + ' ' + issueKey,
+        title: commitMessage,
+        subtitle: '[' + issue.fields.status.name + '] ' + linkType + ' ' + issueKey,
         icon: 'images/task.png',
-        autocomplete: link.inwardIssue.key,
-        arg: link.inwardIssue.key
+        autocomplete: issue.key,
+        arg: commitMessage
       }
     }
   },
 
   issue: function formatIssue(issue) {
     var assignee = issue.fields.assignee ? issue.fields.assignee.displayName : 'Unassigned';
+    var commitMessage = issue.key + ' ' + issue.fields.summary;
     return {
-      title: issue.key + ' ' + issue.fields.summary,
+      title: commitMessage,
       subtitle: '[' + issue.fields.status.name + '] ' + assignee,
       icon: 'images/task.png',
       autocomplete: issue.key,
-      arg: issue.key
+      arg: commitMessage
     }
   },
 
   subtask: function formatSubtask(subtask, issueKey) {
+    var commitMessage = subtask.key + ' ' + subtask.fields.summary;
     return {
-      title: subtask.key + ' ' + subtask.fields.summary,
+      title: commitMessage,
       subtitle: '[' + subtask.fields.status.name + '] сабтаск для ' + issueKey,
       icon: 'images/task.png',
       autocomplete: subtask.key,
-      arg: subtask.key
+      arg: commitMessage
     }
   },
 

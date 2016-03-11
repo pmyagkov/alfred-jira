@@ -29,9 +29,9 @@ module.exports = {
     }
 
     if (issue) {
-      var commitMessage = issue.key + ' ' + issue.summary;
+      var commitMessage = issue.key + ' ' + issue.fields.summary;
       return {
-        title: commitMessage,
+        title: '~ ' + commitMessage,
         subtitle: '[' + issue.fields.status.name + '] ' + linkType + ' ' + issueKey,
         icon: 'images/task.png',
         autocomplete: issue.key,
@@ -55,7 +55,7 @@ module.exports = {
   subtask: function formatSubtask(subtask, issueKey) {
     var commitMessage = subtask.key + ' ' + subtask.fields.summary;
     return {
-      title: commitMessage,
+      title: '⌞ ' + commitMessage,
       subtitle: '[' + subtask.fields.status.name + '] сабтаск для ' + issueKey,
       icon: 'images/task.png',
       autocomplete: subtask.key,

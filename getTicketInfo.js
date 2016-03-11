@@ -1,18 +1,11 @@
-var argv = require('minimist')(process.argv.slice(2));
+var AlfredError = require('./AlfredError');
 var request = require('request');
 var alfredo = require('alfredo');
 var _ = require('lodash');
 
-var AlfredError = require('./AlfredError');
 var formatter = require('./formatter');
 
 var COMMENTS_TAIL = 5;
-
-if (!argv['_'].length) {
-  return new alfredo.Item({
-    title: 'No query passed'
-  }).feedback();
-}
 
 function outputIssueInfo(data) {
   var items = [new alfredo.Item(formatter.issue(data))];
@@ -58,8 +51,8 @@ function makeRequest(queryConfigObj) {
       'Content-type': 'application/json'
     },
     auth: {
-      'user': configObj.user,
-      'pass': configObj.pass
+      'user': queryConfigObj.user,
+      'pass': queryConfigObj.pass
     }
 
   }, function (error, response, body) {
@@ -120,17 +113,12 @@ function calculateQuery(inputQuery, configObj) {
   };
 }
 
-var configObj = require('./config').read();
 var queryObj;
-
-if (configObj instanceof AlfredError) {
-  return configObj.toItem().feedback();
-} else {
-
-  queryObj = calculateQuery(argv['_'][0], configObj);
+module.exports = function (query, configObj) {
+  queryObj = calculateQuery(query, configObj);
   if (queryObj instanceof AlfredError) {
     return queryObj.toItem().feedback();
   }
 
   makeRequest(_.extend(configObj, queryObj));
-}
+};

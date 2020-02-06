@@ -1,18 +1,25 @@
 var AlfredError = require('./AlfredError');
 var argv = require('minimist')(process.argv.slice(2));
-var alfredo = require('alfredo');
 
 if (!argv['_'].length) {
-  return new alfredo.Item({
+  console.log(JSON.stringify({
     title: 'No query passed'
-  }).feedback();
+  }));
 }
 
 var configObj = require('./config').read();
 
 if (configObj instanceof AlfredError) {
-  return configObj.toItem().feedback();
+  console.log(JSON.stringify(configObj));
 } else {
 
-  require('./getTicketInfo')(argv['_'][0], configObj);
+  require('./getTicketInfo')(argv['_'][0], configObj)
+    .then((result) => {
+      console.log(JSON.stringify(result))
+    })
+    .catch((error) => {
+      console.log(JSON.stringify({
+        title: error.text,
+      }))
+    });
 }

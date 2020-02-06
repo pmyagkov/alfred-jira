@@ -1,6 +1,5 @@
 var AlfredError = require('./AlfredError');
 var request = require('request');
-var alfredo = require('alfredo');
 var _ = require('lodash');
 
 var formatter = require('./formatter');
@@ -8,86 +7,91 @@ var formatter = require('./formatter');
 var COMMENTS_TAIL = 5;
 
 function outputIssueInfo(data) {
-  var items = [new alfredo.Item(formatter.issue(data))];
+  var items = [formatter.issue(data)];
 
   var subtasks = data.fields.subtasks;
   for (var i = 0; i < subtasks.length; i++) {
-    items.push(new alfredo.Item(formatter.subtask(subtasks[i], data.key)));
+    items.push(formatter.subtask(subtasks[i], data.key));
   }
 
   var links = data.fields.issuelinks;
   for (var i = 0; i < links.length; i++) {
-    items.push(new alfredo.Item(formatter.link(links[i], data.key)));
+    items.push(formatter.link(links[i], data.key));
   }
 
   var comments = data.fields.comment.comments;
   var commentsCount = Math.min(comments.length, COMMENTS_TAIL);
   for (var i = comments.length - commentsCount;i < commentsCount; i++) {
-    items.push(new alfredo.Item(formatter.comment(comments[i], data.key)));
+    items.push(formatter.comment(comments[i], data.key));
   }
 
-  items[0].feedback(items);
+  return { items }
 }
 
 function outputSearchResults(data) {
   var items = data.issues.map(function (issue) {
-    return new alfredo.Item(formatter.issue(issue));
+    return formatter.issue(issue);
   });
 
   if (items.length) {
-    items[0].feedback(items);
+    return items;
   } else {
-    return new alfredo.Item({
+    return {
       title: 'No issues found'
-    }).feedback();
+    };
   }
 }
 
 function makeRequest(queryConfigObj) {
-  request({
-    method: 'GET',
-    uri: formatter.url(queryConfigObj),
-    headers: {
-      'Content-type': 'application/json'
-    },
-    auth: {
-      'user': queryConfigObj.user,
-      'pass': queryConfigObj.pass
-    }
-
-  }, function (error, response, body) {
-    if (error) {
-      if (error.message.indexOf('auth()') > -1) {
-        return formatter.error('Provided username of password is invalid')
-          .toItem().feedback();
+  return new Promise((resolve, reject) => {
+    request({
+      method: 'GET',
+      uri: formatter.url(queryConfigObj),
+      headers: {
+        'Content-type': 'application/json'
+      },
+      auth: {
+        'user': queryConfigObj.user,
+        'pass': queryConfigObj.pass
       }
-
-      return formatter.error('Unexpected error', error.message)
-        .toItem().feedback();
-    }
-
-    if (typeof body === 'string') {
-      body = JSON.parse(body)
-    }
-
-    switch (response.statusCode) {
-      case 404:
-        return formatter.error('No issues found').toItem().feedback();
-
-      case 200:
-        if (queryConfigObj.isSearch) {
-          return outputSearchResults(body);
-        } else {
-          return outputIssueInfo(body);
+  
+    }, function (error, response, body) {
+      const result = (() => {
+        if (error) {
+          if (error.message.indexOf('auth()') > -1) {
+            return formatter.error('Provided username of password is invalid');
+          }
+    
+          return formatter.error('Unexpected error', error.message);
         }
+    
+        if (typeof body === 'string') {
+          body = JSON.parse(body)
+        }
+    
+        switch (response.statusCode) {
+          case 404:
+            return formatter.error('No issues found');
+    
+          case 200:
+            if (queryConfigObj.isSearch) {
+              return outputSearchResults(body);
+            } else {
+              return outputIssueInfo(body);
+            }
+    
+          default:
+            return formatter.error(
+              'Unexpected Jira response status: ' + response.statusCode,
+              body.errorMessages
+            );
+        }
+      })()
 
-      default:
-        return formatter.error(
-          'Unexpected Jira response status: ' + response.statusCode,
-          body.errorMessages
-        ).toItem().feedback();
-    }
-  });
+      resolve(result)
+
+    });
+  })
 }
 
 function calculateQuery(inputQuery, configObj) {
@@ -117,8 +121,8 @@ var queryObj;
 module.exports = function (query, configObj) {
   queryObj = calculateQuery(query, configObj);
   if (queryObj instanceof AlfredError) {
-    return queryObj.toItem().feedback();
+    return Promise.resolve(queryObj);
   }
 
-  makeRequest(_.extend(configObj, queryObj));
+  return makeRequest(_.extend(configObj, queryObj));
 };

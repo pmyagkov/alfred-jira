@@ -1,5 +1,3 @@
-var alfredo = require('alfredo');
-
 function AlfredError(title, subtitle) {
   this.title = title;
   if (subtitle instanceof Array) {
@@ -10,12 +8,3 @@ function AlfredError(title, subtitle) {
 }
 
 module.exports = AlfredError;
-
-AlfredError.prototype.toItem = function toAlfredItem() {
-  return new alfredo.Item({
-    title: this.title,
-    subtitle: this.subtitle
-  })
-};
-
-

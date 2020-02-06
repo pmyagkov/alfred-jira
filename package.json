@@ -1,0 +1,26 @@
+{
+  "name": "alfred-jira",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pmyagkov/alfred-jira.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pmyagkov/alfred-jira/issues"
+  },
+  "homepage": "https://github.com/pmyagkov/alfred-jira#readme",
+  "dependencies": {
+    "alfredo": "^0.2.0",
+    "flavored-path": "0.0.8",
+    "lodash": "^4.17.11",
+    "minimist": "^1.2.0",
+    "request": "^2.61.0"
+  }
+}

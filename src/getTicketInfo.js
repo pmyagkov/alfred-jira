@@ -58,32 +58,32 @@ function makeRequest(queryConfigObj) {
         'user': queryConfigObj.user,
         'pass': queryConfigObj.pass
       }
-  
+
     }, function (error, response, body) {
       const result = (() => {
         if (error) {
           if (error.message.indexOf('auth()') > -1) {
             return formatter.error('Provided username of password is invalid');
           }
-    
+
           return formatter.error('Unexpected error', error.message);
         }
-    
+
         if (typeof body === 'string') {
           body = JSON.parse(body)
         }
-    
+
         switch (response.statusCode) {
           case 404:
             return formatter.error('No issues found');
-    
+
           case 200:
             if (queryConfigObj.isSearch) {
               return outputSearchResults(body);
             } else {
               return outputIssueInfo(body);
             }
-    
+
           default:
             return formatter.error(
               'Unexpected Jira response status: ' + response.statusCode,
@@ -138,7 +138,7 @@ module.exports = function (query, configObj) {
     ...(_.extend(configObj, queryObj)),
   }).then((result) => {
     // console.log('10', result)
-    return { 
+    return {
       response: result,
       issue_key,
       issue_text,

@@ -1,5 +1,7 @@
 var AlfredError = require('./AlfredError');
 
+const IMAGES_DIR = `../images/`
+
 module.exports = {
 
   comment: function formatComment(comment, issueKey) {
@@ -10,7 +12,7 @@ module.exports = {
     return {
       title: commentBody,
       subtitle: comment.author.displayName + ' <' + comment.author.emailAddress + '>',
-      icon: 'images/comment.png',
+      icon: `${ IMAGES_DIR }comment.png`,
       valid: false,
       arg: issueKey
     }
@@ -33,7 +35,7 @@ module.exports = {
       return {
         title: '~ ' + commitMessage,
         subtitle: '[' + issue.fields.status.name + '] ' + linkType + ' ' + issueKey,
-        icon: 'images/task.png',
+        icon: `${ IMAGES_DIR }task.png`,
         autocomplete: issue.key,
         arg: commitMessage
       }
@@ -47,7 +49,7 @@ module.exports = {
     return {
       title: commitMessage,
       subtitle: '[' + issue.fields.status.name + '] ' + assignee,
-      icon: 'images/task.png',
+      icon: `${ IMAGES_DIR }task.png`,
       autocomplete: issue.key,
       arg: commitMessage
     }
@@ -58,7 +60,7 @@ module.exports = {
     return {
       title: '⌞ ' + commitMessage,
       subtitle: '[' + subtask.fields.status.name + '] сабтаск для ' + issueKey,
-      icon: 'images/task.png',
+      icon: `${ IMAGES_DIR }task.png`,
       autocomplete: subtask.key,
       arg: commitMessage
     }

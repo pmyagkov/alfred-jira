@@ -43,6 +43,7 @@ module.exports = {
   issue: function formatIssue(issue) {
     var assignee = issue.fields.assignee ? issue.fields.assignee.displayName : 'Unassigned';
     var commitMessage = issue.key + ' ' + issue.fields.summary;
+
     return {
       title: commitMessage,
       subtitle: '[' + issue.fields.status.name + '] ' + assignee,

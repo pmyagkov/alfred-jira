@@ -6,7 +6,11 @@ var formatter = require('./formatter');
 
 var COMMENTS_TAIL = 5;
 
+let issue_key
+let issue_text
 function outputIssueInfo(data) {
+  issue_key = data.key
+  issue_text = data.fields.summary
   var items = [formatter.issue(data)];
 
   var subtasks = data.fields.subtasks;
@@ -25,7 +29,7 @@ function outputIssueInfo(data) {
     items.push(formatter.comment(comments[i], data.key));
   }
 
-  return { items }
+  return items
 }
 
 function outputSearchResults(data) {
@@ -88,8 +92,9 @@ function makeRequest(queryConfigObj) {
         }
       })()
 
-      resolve(result)
+      // console.log('9', result)
 
+      resolve(result)
     });
   })
 }
@@ -120,9 +125,23 @@ function calculateQuery(inputQuery, configObj) {
 var queryObj;
 module.exports = function (query, configObj) {
   queryObj = calculateQuery(query, configObj);
+
   if (queryObj instanceof AlfredError) {
-    return Promise.resolve(queryObj);
+    return Promise.resolve({
+      response: queryObj,
+      issue_key,
+      issue_text,
+    })
   }
 
-  return makeRequest(_.extend(configObj, queryObj));
+  return makeRequest({
+    ...(_.extend(configObj, queryObj)),
+  }).then((result) => {
+    // console.log('10', result)
+    return { 
+      response: result,
+      issue_key,
+      issue_text,
+    }
+  });
 };

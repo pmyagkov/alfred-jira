@@ -1,25 +1,57 @@
 var AlfredError = require('./AlfredError');
 var argv = require('minimist')(process.argv.slice(2));
 
-if (!argv['_'].length) {
-  console.log(JSON.stringify({
-    title: 'No query passed'
-  }));
-}
+(() => {
+  var configObj = require('./config').read();
+  let query
 
-var configObj = require('./config').read();
-
-if (configObj instanceof AlfredError) {
-  console.log(JSON.stringify(configObj));
-} else {
-
-  require('./getTicketInfo')(argv['_'][0], configObj)
-    .then((result) => {
-      console.log(JSON.stringify(result))
-    })
-    .catch((error) => {
-      console.log(JSON.stringify({
-        title: error.text,
-      }))
+  if (!argv['_'].length) {
+    return Promise.resolve({
+      title: 'No query passed'
     });
-}
+  }
+
+  query = argv['_'][0]
+
+  return new Promise((resolve, reject) => {
+    if (!argv['_'].length) {
+      resolve({
+        title: 'No query passed'
+      });
+    }
+
+    if (configObj instanceof AlfredError) {
+      resolve({
+        response: configObj,
+      });
+    } else {
+      return require('./getTicketInfo')(query, configObj)
+        .then(resolve)
+    }
+  }).then((result) => {
+    const { response, issue_key, issue_text } = result
+    // console.log('5', result)
+    if (!query) {
+      return
+    }
+
+    let payload = {
+      items: response,
+    }
+
+    if (issue_key) {
+      payload = {
+        ...payload,
+        variables: {
+          issue_link: `${ configObj.baseUrl }/browse/${ issue_key }`,
+          issue_key,
+          issue_text,
+        },
+      }
+    }
+
+    console.log(JSON.stringify(payload))
+  })
+})()
+
+

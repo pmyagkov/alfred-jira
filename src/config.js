@@ -1,9 +1,9 @@
-var path = require('flavored-path');
 var fs = require('fs');
+const os = require('os')
 var formatter = require('./formatter');
 var _ = require('lodash');
 
-var CONFIG_FILE = path.get('~/.config/alfred-jira/alfred-jira');
+var CONFIG_FILE = `${os.homedir()}/.config/alfred-jira/alfred-jira`;
 
 module.exports = {
   read: function readConfig() {

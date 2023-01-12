@@ -83,7 +83,8 @@
 				<key>runningsubtext</key>
 				<string>Please wait</string>
 				<key>script</key>
-				<string>/Users/puelle/.nvm/versions/node/v14.20.0/bin/node ./src/scriptFilter.js {query}</string>
+				<string>source ~/.zshrc
+node ./src/scriptFilter.js {query}</string>
 				<key>scriptargtype</key>
 				<integer>0</integer>
 				<key>scriptfile</key>
@@ -93,7 +94,7 @@
 				<key>title</key>
 				<string>Get ticket info from JIRA</string>
 				<key>type</key>
-				<integer>0</integer>
+				<integer>5</integer>
 				<key>withspace</key>
 				<true/>
 			</dict>

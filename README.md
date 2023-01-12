@@ -18,7 +18,7 @@ This file should be formatted in the following manner:
 ```
 https://jira.instance.com
 username
-password
+personal-token
 defaultProject
 ```
 
